@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SDE Admin Console</title>
+<style>
+:root{--g:#063f40;--o:#f47719;--bg:#f6f3ed;--line:#e4ddd3;--muted:#71807d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#173c3d;font-family:Arial,sans-serif}
+button,input,textarea,select{font:inherit}button{cursor:pointer}
+header{background:var(--g);color:#fff;padding:18px 5%;display:flex;justify-content:space-between;align-items:center}
+header img{height:42px;width:auto}header a{color:#fff;text-decoration:none;font-size:13px}
+.layout{display:grid;grid-template-columns:230px 1fr;min-height:calc(100vh - 78px)}
+aside{background:#fff;border-right:1px solid var(--line);padding:20px}
+aside button{display:block;width:100%;border:0;background:transparent;text-align:left;padding:13px;border-radius:10px;margin-bottom:6px;color:#173c3d;font-weight:700}
+aside button.active,aside button:hover{background:#fff0e5;color:var(--o)}
+main{padding:28px 4%;max-width:1400px;width:100%;margin:auto}
+h1{margin:0 0 6px;font-size:30px}h2{font-size:20px}.muted{color:var(--muted);font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin:24px 0}
+.stat{background:#fff;padding:20px;border:1px solid var(--line);border-radius:15px}.stat b{font-size:27px;display:block;margin-top:7px}
+.toolbar{display:flex;justify-content:space-between;gap:10px;margin:20px 0;flex-wrap:wrap}
+input,textarea,select{border:1px solid var(--line);background:#fff;border-radius:9px;padding:10px;outline:none}
+.toolbar input{min-width:240px}
+.btn{border:0;background:var(--o);color:#fff;padding:11px 17px;border-radius:9px;font-weight:800}.btn.gray{background:#e9e5de;color:#173c3d}.btn.danger{background:#b9382d}
+.table-wrap{background:#fff;border:1px solid var(--line);border-radius:15px;overflow:auto}
+table{border-collapse:collapse;width:100%;min-width:800px}th,td{text-align:left;padding:13px;border-bottom:1px solid var(--line);font-size:13px}th{background:#faf7f1}
+.thumb{width:58px;height:48px;object-fit:cover;border-radius:7px}.actions{display:flex;gap:6px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:15px;padding:22px;margin-top:20px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.field label{font-size:12px;font-weight:800;display:block;margin-bottom:6px}.field input,.field textarea,.field select{width:100%}.field.full{grid-column:1/-1}textarea{min-height:90px;resize:vertical}
+.hidden{display:none!important}.notice{padding:12px 15px;background:#e9f5f2;border:1px solid #c8e4df;border-radius:10px;font-size:13px;margin:15px 0}
+.login{max-width:430px;margin:80px auto;background:#fff;padding:30px;border-radius:18px;border:1px solid var(--line)}.login img{width:150px;height:auto;margin-bottom:20px}.login input{width:100%;margin:8px 0}
+@media(max-width:800px){.layout{grid-template-columns:1fr}aside{display:flex;overflow:auto;border-right:0;border-bottom:1px solid var(--line);gap:5px}aside button{white-space:nowrap;width:auto}.stats{grid-template-columns:1fr}.formgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><img src="logo-sde.png" alt="SDE"><a href="index.html">← Lihat Website</a></header>
+
+<div id="login" class="login">
+  <img src="logo-sde.png" alt="SDE">
+  <h2>Admin Console</h2>
+  <p class="muted">Kelola produk tanpa mengubah kode.</p>
+  <input id="pin" type="password" placeholder="PIN admin">
+  <button class="btn" style="width:100%;margin-top:8px" onclick="login()">Masuk</button>
+  <p class="muted" style="margin-top:15px">Demo lokal: PIN awal <b>1234</b>. Ganti PIN di bagian Pengaturan.</p>
+</div>
+
+<div id="app" class="layout hidden">
+<aside>
+<button class="active" onclick="tab('dashboard',this)">Dashboard</button>
+<button onclick="tab('products',this)">Produk</button>
+<button onclick="tab('settings',this)">Pengaturan</button>
+</aside>
+<main>
+<section id="dashboard">
+<div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
+<div class="stat"><small>Total Pengunjung</small><b id="visTotal">0</b></div>
+<div class="stat"><small>Hari Ini</small><b id="visToday">0</b></div>
+<div class="stat"><small>Produk Dilihat</small><b id="prodViews">0</b></div>
+<div class="stat"><small>Pesanan</small><b id="orderCount">0</b></div>
+</div>
+<h1>Dashboard</h1><div class="muted">Kelola toko SDE dari satu tempat.</div>
+<div class="stats"><div class="stat">Total Produk<b id="statProducts">0</b></div><div class="stat">Kategori<b id="statCats">0</b></div><div class="stat">Nilai Produk<b id="statValue">Rp 0</b></div></div>
+<div class="notice">Perubahan produk disimpan di <b>browser ini</b> menggunakan localStorage. Untuk website online dengan banyak admin/perangkat, data perlu dipindahkan ke database/backend.</div>
+</section>
+
+<section id="products" class="hidden">
+<h1>Produk</h1><div class="muted">Tambah, edit, hapus, harga, kategori, dan foto produk.</div>
+<div class="toolbar"><input id="q" placeholder="Cari produk..." oninput="drawProducts()"><button class="btn" onclick="newProduct()">+ Tambah Produk</button></div>
+<div class="table-wrap"><table><thead><tr><th>Foto</th><th>Produk</th><th>Kategori</th><th>Harga</th><th>Aksi</th></tr></thead><tbody id="productRows"></tbody></table></div>
+<div id="editor" class="panel hidden">
+<h2 id="editorTitle">Tambah Produk</h2>
+<input type="hidden" id="pid">
+<div class="formgrid">
+<div class="field"><label>Nama Produk</label><input id="name"></div>
+<div class="field"><label>Kategori</label><select id="cat"><option>Monitoring</option><option>Lampu</option><option>Meja</option><option>Kursi</option><option>Rak</option><option>Aksesori</option></select></div>
+<div class="field"><label>Harga (Rupiah)</label><input id="price" type="number" min="0"></div>
+<div class="field"><label>URL Foto Utama</label><input id="image" placeholder="https://..."></div>
+<div class="field"><label>Foto Tambahan</label><input id="photos" placeholder="Pisahkan URL dengan koma"></div>
+<div class="field"><label>Link Video</label><input id="video" placeholder="Link YouTube / video"></div>
+<div class="field"><label>Link Tokopedia</label><input id="tokopedia" placeholder="https://www.tokopedia.com/..."></div>
+<div class="field"><label>Link YouTube</label><input id="youtube" placeholder="https://www.youtube.com/watch?v=..."></div>
+<div class="field"><label>Kontak</label><input id="contact" placeholder="WhatsApp: 0812..."></div>
+<div class="field full"><label>Deskripsi</label><textarea id="desc"></textarea></div>
+</div>
+<div style="margin-top:15px;display:flex;gap:8px"><button class="btn" onclick="saveProduct()">Simpan</button><button class="btn gray" onclick="cancelEdit()">Batal</button></div>
+</div>
+</section>
+
+<section id="orders" class="hidden">
+<h1>Pesanan</h1><div class="muted">Daftar pesanan demo. Siap dikembangkan menjadi pesanan database.</div>
+<div class="toolbar"><button class="btn" onclick="addOrder()">+ Simulasi Pesanan</button></div>
+<div class="table-wrap"><table><thead><tr><th>ID</th><th>Pelanggan</th><th>Produk</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="orderRows"></tbody></table></div>
+</section>
+<section id="visitors" class="hidden">
+<h1>Pengunjung</h1><div class="muted">Statistik kunjungan yang dicatat browser.</div>
+<div class="stats"><div class="stat"><small>Total</small><b id="vTotal">0</b></div><div class="stat"><small>Hari Ini</small><b id="vToday">0</b></div><div class="stat"><small>7 Hari</small><b id="v7">0</b></div><div class="stat"><small>30 Hari</small><b id="v30">0</b></div></div>
+<div class="panel"><h2>Kunjungan 7 Hari</h2><div id="visitorChart" style="display:flex;align-items:end;height:210px;gap:8px"></div></div>
+</section>
+<section id="settings" class="hidden">
+<h1>Pengaturan</h1><div class="muted">Pengaturan sederhana untuk admin.</div>
+<div class="panel"><h2>Ganti PIN Admin</h2><div class="formgrid"><div class="field"><label>PIN baru</label><input id="newPin" type="password"></div></div><button class="btn" style="margin-top:15px" onclick="changePin()">Simpan PIN</button></div>
+<div class="panel"><h2>Reset Data Produk</h2><p class="muted">Mengembalikan produk ke data awal demo.</p><button class="btn danger" onclick="resetProducts()">Reset Produk</button></div>
+</section>
+</main></div>
+
+<script>
+const initial=[
+{id:1,n:"Sensor Suhu & Kelembapan",c:"Monitoring",p:120000,i:"https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&q=80",d:"Pantau suhu dan kelembapan ruangan secara real-time."},
+{id:2,n:"Lampu Meja Warm Glow",c:"Lampu",p:85000,i:"https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=800&q=80",d:"Lampu meja hangat untuk membaca dan bekerja."},
+{id:3,n:"Smart Plug Mini",c:"Monitoring",p:95000,i:"https://images.unsplash.com/photo-1558008258-3256797b43f3?auto=format&fit=crop&w=800&q=80",d:"Perangkat kecil untuk mengontrol kebutuhan listrik."},
+{id:4,n:"Rak Dinding Minimalis",c:"Rak",p:145000,i:"https://images.unsplash.com/photo-1594620302200-9a762244a156?auto=format&fit=crop&w=800&q=80",d:"Membantu barang kecil tersusun lebih rapi."},
+{id:5,n:"Meja Samping Kayu",c:"Meja",p:275000,i:"https://images.unsplash.com/photo-1532372576444-dda954194ad0?auto=format&fit=crop&w=800&q=80",d:"Meja compact untuk sofa atau samping tempat tidur."},
+{id:6,n:"Kursi Santai Minimalis",c:"Kursi",p:490000,i:"https://images.unsplash.com/photo-1503602642458-232111445657?auto=format&fit=crop&w=800&q=80",d:"Kursi sederhana untuk ruang santai."},
+{id:7,n:"Organizer Meja",c:"Aksesori",p:65000,i:"https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&w=800&q=80",d:"Untuk kabel, alat tulis, remote, dan barang kecil."},
+{id:8,n:"Lampu Dinding Compact",c:"Lampu",p:175000,i:"https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&w=800&q=80",d:"Penerangan aksen untuk sudut rumah."}
+];
+let products=JSON.parse(localStorage.getItem("sdeProducts")||"null")||initial;
+products=products.map(p=>Object.assign({photos:[p.i],video:"",tokopedia:"",youtube:"",contact:"WhatsApp: 08xx-xxxx-xxxx"},p));
+const rp=n=>"Rp "+Number(n).toLocaleString("id-ID");
+function login(){let pin=localStorage.getItem("sdeAdminPin")||"1234";if(document.getElementById("pin").value===pin){document.getElementById("login").classList.add("hidden");document.getElementById("app").classList.remove("hidden");refresh()}else alert("PIN salah.")}
+function tab(id,btn){document.querySelectorAll("main section").forEach(s=>s.classList.add("hidden"));document.getElementById(id).classList.remove("hidden");document.querySelectorAll("aside button").forEach(b=>b.classList.remove("active"));btn.classList.add("active");if(id==="products")drawProducts();if(id==="dashboard")refresh()}
+function persist(){localStorage.setItem("sdeProducts",JSON.stringify(products));refresh();drawProducts()}
+function refresh(){document.getElementById("statProducts").textContent=products.length;document.getElementById("statCats").textContent=new Set(products.map(x=>x.c)).size;document.getElementById("statValue").textContent=rp(products.reduce((s,x)=>s+Number(x.p),0))}
+function drawProducts(){let q=(document.getElementById("q")?.value||"").toLowerCase();let list=products.filter(x=>(x.n+" "+x.c).toLowerCase().includes(q));document.getElementById("productRows").innerHTML=list.map(x=>`<tr><td><img class="thumb" src="${x.i}" alt=""></td><td><b>${x.n}</b><br><span class="muted">${x.d}</span></td><td>${x.c}</td><td>${rp(x.p)}</td><td><div class="actions"><button class="btn gray" onclick="editProduct(${x.id})">Edit</button><button class="btn danger" onclick="deleteProduct(${x.id})">Hapus</button></div></td></tr>`).join("")}
+function newProduct(){document.getElementById("editor").classList.remove("hidden");document.getElementById("editorTitle").textContent="Tambah Produk";["pid","name","price","image","photos","video","tokopedia","youtube","contact","desc"].forEach(id=>document.getElementById(id).value="");document.getElementById("cat").value="Monitoring";window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"})}
+function editProduct(id){let x=products.find(a=>a.id===id);document.getElementById("editor").classList.remove("hidden");document.getElementById("editorTitle").textContent="Edit Produk";document.getElementById("pid").value=x.id;document.getElementById("name").value=x.n;document.getElementById("cat").value=x.c;document.getElementById("price").value=x.p;document.getElementById("image").value=x.i;document.getElementById("photos").value=(x.photos||[]).filter(u=>u!==x.i).join(", ");document.getElementById("video").value=x.video||"";document.getElementById("tokopedia").value=x.tokopedia||"";document.getElementById("youtube").value=x.youtube||"";document.getElementById("contact").value=x.contact||"";document.getElementById("desc").value=x.d||"";window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"})}
+function saveProduct(){let name=document.getElementById("name").value.trim(),price=Number(document.getElementById("price").value),image=document.getElementById("image").value.trim(),desc=document.getElementById("desc").value.trim(),cat=document.getElementById("cat").value,id=Number(document.getElementById("pid").value);if(!name||!price||!image){alert("Nama, harga, dan foto wajib diisi.");return}let extraPhotos=document.getElementById("photos").value.split(",").map(x=>x.trim()).filter(Boolean);
+let obj={id:id||Date.now(),n:name,c:cat,p:price,i:image,photos:[image,...extraPhotos.filter(u=>u!==image)],video:document.getElementById("video").value.trim(),tokopedia:document.getElementById("tokopedia").value.trim(),youtube:document.getElementById("youtube").value.trim(),contact:document.getElementById("contact").value.trim()||"WhatsApp: 08xx-xxxx-xxxx",d:desc};if(id){products=products.map(x=>x.id===id?obj:x)}else products.push(obj);persist();cancelEdit();alert("Produk berhasil disimpan.")}
+function cancelEdit(){document.getElementById("editor").classList.add("hidden")}
+function deleteProduct(id){if(confirm("Hapus produk ini?")){products=products.filter(x=>x.id!==id);persist()}}
+function changePin(){let p=document.getElementById("newPin").value.trim();if(p.length<4){alert("PIN minimal 4 karakter.");return}localStorage.setItem("sdeAdminPin",p);document.getElementById("newPin").value="";alert("PIN berhasil diganti.")}
+function resetProducts(){if(confirm("Kembalikan produk ke data awal?")){products=JSON.parse(JSON.stringify(initial));persist();alert("Data produk dikembalikan.")}}
+refresh();
+
+let orders=JSON.parse(localStorage.getItem("sdeOrders")||"[]");
+function visitStats(){let v=JSON.parse(localStorage.getItem("sdeVisits")||"{}"),now=new Date(),days=[];for(let i=29;i>=0;i--){let d=new Date();d.setDate(now.getDate()-i);let k=d.toISOString().slice(0,10);days.push({k,v:v[k]||0})}let total=Object.values(v).reduce((a,b)=>a+b,0),today=v[now.toISOString().slice(0,10)]||0;document.getElementById("visTotal").textContent=total;document.getElementById("visToday").textContent=today;document.getElementById("vTotal").textContent=total;document.getElementById("vToday").textContent=today;document.getElementById("v7").textContent=days.slice(-7).reduce((a,x)=>a+x.v,0);document.getElementById("v30").textContent=days.reduce((a,x)=>a+x.v,0);let max=Math.max(1,...days.map(x=>x.v));document.getElementById("visitorChart").innerHTML=days.map(x=>`<div title="${x.k}: ${x.v}" style="flex:1;height:${Math.max(5,x.v/max*170)}px;background:#f47719;border-radius:5px 5px 0 0"></div>`).join("")}
+function orderView(){document.getElementById("orderCount").textContent=orders.length;document.getElementById("orderRows").innerHTML=orders.length?orders.map((o,i)=>`<tr><td>${o.id}</td><td>${o.name}<br>${o.phone}</td><td>${o.product}</td><td>${rp(o.total)}</td><td>${o.status}</td><td><button class="btn gray" onclick="toggleOrder(${i})">Ubah Status</button></td></tr>`).join(""):'<tr><td colspan="6" style="text-align:center;padding:30px">Belum ada pesanan.</td></tr>'}
+function addOrder(){let p=products[0];orders.push({id:"SDE-"+Date.now().toString().slice(-6),name:"Pelanggan Demo",phone:"08xx-xxxx-xxxx",product:p?.n||"Produk",total:p?.p||0,status:"Baru"});localStorage.setItem("sdeOrders",JSON.stringify(orders));orderView()}
+function toggleOrder(i){orders[i].status=orders[i].status==="Selesai"?"Baru":"Selesai";localStorage.setItem("sdeOrders",JSON.stringify(orders));orderView()}
+function oldRefresh(){if(typeof refresh==="function")refresh();visitStats();orderView();document.getElementById("prodViews").textContent=products.reduce((a,p)=>a+(p.views||0),0)}
+visitStats();orderView();oldRefresh();
+</script>
+</body>
+</html>
