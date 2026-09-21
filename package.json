@@ -1,0 +1,20 @@
+{
+  "name": "sde-cloudflare-store",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create sde-store-db",
+    "db:migrate": "wrangler d1 execute sde-store-db --remote --file=./schema.sql",
+    "db:migrate:local": "wrangler d1 execute sde-store-db --local --file=./schema.sql"
+  },
+  "dependencies": {
+    "hono": "^4.9.7"
+  },
+  "devDependencies": {
+    "wrangler": "^4.38.0",
+    "typescript": "^5.9.2"
+  }
+}
