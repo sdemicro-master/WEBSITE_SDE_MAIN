@@ -4,7 +4,6 @@ import { cors } from 'hono/cors'
 
 type Bindings = {
   DB: D1Database
-  PRODUCT_IMAGES: R2Bucket
   ADMIN_PASSWORD: string
   ADMIN_SESSION_SECRET: string
 }
@@ -16,7 +15,8 @@ type Product = {
   description: string
   price: number
   category: string
-  image_key: string
+  image_blob: ArrayBuffer | null
+  image_mime: string
   active: number
   featured: number
   sort_order: number
@@ -117,7 +117,7 @@ function productView(c: any, p: Product) {
     price: Number(p.price),
     active: Boolean(p.active),
     featured: Boolean(p.featured),
-    image_url: p.image_key ? `/media/${encodeURIComponent(p.image_key)}` : ''
+    image_url: p.image_blob ? `/api/images/${p.id}` : ''
   }
 }
 
@@ -216,7 +216,7 @@ app.post('/api/admin/products', async (c) => {
 
   const result = await c.env.DB.prepare(`
     INSERT INTO products
-      (name, slug, description, price, category, image_key, shopee_url, tokopedia_url, contact_url, active, featured, sort_order, updated_at)
+      (name, slug, description, price, category, image_blob, image_mime, shopee_url, tokopedia_url, contact_url, active, featured, sort_order, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     RETURNING *
   `).bind(
@@ -225,7 +225,8 @@ app.post('/api/admin/products', async (c) => {
     String(body.description || ''),
     Math.max(0, Number(body.price || 0)),
     String(body.category || 'Produk'),
-    String(body.image_key || ''),
+    null,
+    '',
     String((body as any).shopee_url || ''),
     String((body as any).tokopedia_url || ''),
     String((body as any).contact_url || ''),
@@ -253,7 +254,8 @@ app.put('/api/admin/products/:id', async (c) => {
   const result = await c.env.DB.prepare(`
     UPDATE products SET
       name = ?, slug = ?, description = ?, price = ?, category = ?,
-      image_key = ?, shopee_url = ?, tokopedia_url = ?, contact_url = ?,
+      image_blob = COALESCE(?, image_blob), image_mime = COALESCE(?, image_mime),
+      shopee_url = ?, tokopedia_url = ?, contact_url = ?,
       active = ?, featured = ?, sort_order = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
     RETURNING *
@@ -263,7 +265,8 @@ app.put('/api/admin/products/:id', async (c) => {
     String(body.description ?? current.description),
     Math.max(0, Number(body.price ?? current.price)),
     String(body.category ?? current.category),
-    String(body.image_key ?? current.image_key),
+    null,
+    '',
     String((body as any).shopee_url ?? (current as any).shopee_url ?? ''),
     String((body as any).tokopedia_url ?? (current as any).tokopedia_url ?? ''),
     String((body as any).contact_url ?? (current as any).contact_url ?? ''),
@@ -282,17 +285,14 @@ app.delete('/api/admin/products/:id', async (c) => {
   if (denied) return denied
 
   const id = Number(c.req.param('id'))
-  const current = await c.env.DB.prepare(`SELECT image_key FROM products WHERE id = ?`).bind(id).first<{image_key: string}>()
+  const current = await c.env.DB.prepare(`SELECT id FROM products WHERE id = ?`).bind(id).first<{id: number}>()
   if (!current) return c.json({ error: 'Product not found' }, 404)
 
   await c.env.DB.prepare(`DELETE FROM products WHERE id = ?`).bind(id).run()
-  if (current.image_key) {
-    await c.env.PRODUCT_IMAGES.delete(current.image_key)
-  }
   return c.json({ ok: true })
 })
 
-// Upload image to R2
+// Upload a photo temporarily to the browser, then save it as a D1 BLOB.
 app.post('/api/admin/upload', async (c) => {
   const denied = await requireAdmin(c)
   if (denied) return denied
@@ -302,38 +302,50 @@ app.post('/api/admin/upload', async (c) => {
   if (!(file instanceof File)) return c.json({ error: 'File foto tidak ditemukan.' }, 400)
 
   const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
-  if (!allowed.includes(file.type)) {
-    return c.json({ error: 'Format harus JPG, PNG, WEBP, atau AVIF.' }, 400)
-  }
-  if (file.size > 5 * 1024 * 1024) {
-    return c.json({ error: 'Ukuran maksimum 5 MB.' }, 400)
-  }
+  if (!allowed.includes(file.type)) return c.json({ error: 'Format harus JPG, PNG, WEBP, atau AVIF.' }, 400)
+  if (file.size > 1024 * 1024) return c.json({ error: 'Ukuran maksimum 1 MB.' }, 400)
 
-  const ext = file.type.split('/')[1].replace('jpeg', 'jpg')
-  const key = `products/${crypto.randomUUID()}.${ext}`
-  await c.env.PRODUCT_IMAGES.put(key, file.stream(), {
-    httpMetadata: { contentType: file.type, cacheControl: 'public, max-age=31536000, immutable' }
-  })
-
-  return c.json({
-    ok: true,
-    key,
-    url: `/media/${encodeURIComponent(key)}`
-  })
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  let binary = ''
+  const chunk = 0x8000
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
+  }
+  return c.json({ ok: true, image_base64: btoa(binary), mime: file.type, size: file.size })
 })
 
-// R2 image delivery
-app.get('/media/*', async (c) => {
-  const key = c.req.path.replace(/^\/media\//, '')
-  const decodedKey = decodeURIComponent(key)
-  const object = await c.env.PRODUCT_IMAGES.get(decodedKey)
-  if (!object) return c.notFound()
+app.put('/api/admin/products/:id/image', async (c) => {
+  const denied = await requireAdmin(c)
+  if (denied) return denied
 
+  const id = Number(c.req.param('id'))
+  const body = await c.req.json<{image_base64?: string, mime?: string}>()
+  if (!body.image_base64 || !body.mime) return c.json({ error: 'Data foto tidak lengkap.' }, 400)
+
+  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
+  if (!allowed.includes(body.mime)) return c.json({ error: 'Format gambar tidak didukung.' }, 400)
+
+  const binary = Uint8Array.from(atob(body.image_base64), ch => ch.charCodeAt(0))
+  if (binary.byteLength > 1024 * 1024) return c.json({ error: 'Ukuran maksimum 1 MB.' }, 400)
+
+  await c.env.DB.prepare(
+    `UPDATE products SET image_blob = ?, image_mime = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+  ).bind(binary, body.mime, id).run()
+
+  return c.json({ ok: true, image_url: `/api/images/${id}` })
+})
+
+app.get('/api/images/:id', async (c) => {
+  const id = Number(c.req.param('id'))
+  const row = await c.env.DB.prepare(
+    `SELECT image_blob, image_mime FROM products WHERE id = ?`
+  ).bind(id).first<{image_blob: ArrayBuffer | null, image_mime: string}>()
+
+  if (!row?.image_blob) return c.notFound()
   const headers = new Headers()
-  object.writeHttpMetadata(headers)
-  headers.set('etag', object.httpEtag)
-  headers.set('cache-control', 'public, max-age=31536000, immutable')
-  return new Response(object.body, { headers })
+  headers.set('Content-Type', row.image_mime || 'image/jpeg')
+  headers.set('Cache-Control', 'public, max-age=86400')
+  return new Response(row.image_blob, { headers })
 })
 
 // Serve SPA/static assets

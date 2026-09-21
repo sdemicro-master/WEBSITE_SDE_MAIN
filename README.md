@@ -136,3 +136,25 @@ Di Admin Console setiap produk mempunyai:
 - Kontak Produk URL (contoh link WhatsApp `https://wa.me/628xxxxxxxxxx`)
 
 Jika salah satu link kosong, tombolnya tidak ditampilkan.
+
+
+## Foto disimpan langsung di Cloudflare D1
+
+Versi ini tidak membutuhkan R2 atau Cloudinary.
+
+Admin memilih foto dari komputer. Worker menerima file tersebut dan menyimpannya sebagai BLOB di tabel `products`:
+
+- `image_blob` — binary foto
+- `image_mime` — MIME type
+
+Batas foto: 1 MB per produk.
+
+Endpoint gambar:
+
+```text
+/api/images/:id
+```
+
+Untuk katalog kecil, ini memberikan deployment paling sederhana: **1 Worker + 1 D1**.
+
+Jika katalog nantinya menyimpan banyak foto besar, pindahkan image storage ke R2 karena D1 bukan object storage.

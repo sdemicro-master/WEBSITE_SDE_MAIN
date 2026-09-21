@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS products (
   description TEXT DEFAULT '',
   price INTEGER NOT NULL DEFAULT 0,
   category TEXT DEFAULT 'Produk',
-  image_key TEXT DEFAULT '',
+  image_blob BLOB,
+  image_mime TEXT DEFAULT '',
   shopee_url TEXT DEFAULT '',
   tokopedia_url TEXT DEFAULT '',
   contact_url TEXT DEFAULT '',
@@ -22,13 +23,13 @@ CREATE INDEX IF NOT EXISTS idx_products_active_featured
   ON products(active, featured, sort_order);
 
 INSERT OR IGNORE INTO products
-(name, slug, description, price, category, image_key, shopee_url, tokopedia_url, contact_url, active, featured, sort_order)
+(name, slug, description, price, category, image_blob, image_mime, shopee_url, tokopedia_url, contact_url, active, featured, sort_order)
 VALUES
 ('Sensor Suhu & Kelembapan', 'sensor-suhu-kelembapan',
- 'Pantau kondisi ruangan secara real-time.', 120000, 'IoT Monitoring', '', '', '', '', 1, 1, 1),
+ 'Pantau kondisi ruangan secara real-time.', 120000, 'IoT Monitoring', NULL, '', '', '', '', 1, 1, 1),
 ('Lampu Pintar DIY', 'lampu-pintar-diy',
- 'Kontrol cahaya sesuai kebutuhan.', 85000, 'Smart Home', '', '', '', '', 1, 1, 2),
+ 'Kontrol cahaya sesuai kebutuhan.', 85000, 'Smart Home', NULL, '', '', '', '', 1, 1, 2),
 ('Smart Plug', 'smart-plug',
- 'Kendalikan perangkat dari mana saja.', 95000, 'Smart Home', '', '', '', '', 1, 1, 3),
+ 'Kendalikan perangkat dari mana saja.', 95000, 'Smart Home', NULL, '', '', '', '', 1, 1, 3),
 ('Aksesoris Rumah DIY', 'aksesoris-rumah-diy',
- 'Kreasikan ruang sesuai gaya Anda.', 50000, 'Aksesoris', '', '', '', '', 1, 1, 4);
+ 'Kreasikan ruang sesuai gaya Anda.', 50000, 'Aksesoris', NULL, '', '', '', '', 1, 1, 4);

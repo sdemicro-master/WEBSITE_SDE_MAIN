@@ -1,6 +1,7 @@
 const $ = (s) => document.querySelector(s);
 const rupiah = (n) => new Intl.NumberFormat('id-ID', {style:'currency', currency:'IDR', maximumFractionDigits:0}).format(n);
 let products = [];
+let pendingImage = null;
 
 async function api(url, options={}) {
   const res = await fetch(url, options);
@@ -65,6 +66,7 @@ function render() {
 $('#search').oninput = render;
 
 function resetForm() {
+  pendingImage = null;
   $('#product-form').reset();
   $('#product-id').value = '';
   $('#image-key').value = '';
@@ -104,21 +106,23 @@ window.editProduct = (id) => {
   openModal();
 };
 
-$('#photo').addEventListener('change', async e => {
+$('#photo').addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
-  $('#upload-status').textContent = 'Mengupload foto ke Cloudflare R2…';
-  try {
-    const fd = new FormData();
-    fd.append('file', file);
-    const result = await api('/api/admin/upload', {method:'POST', body:fd});
-    $('#image-key').value = result.key;
-    $('#preview').innerHTML = `<img src="${result.url}" alt="">`;
-    $('#upload-status').textContent = 'Foto berhasil diupload.';
-  } catch (err) {
-    $('#upload-status').textContent = err.message;
+  if (file.size > 1024 * 1024) {
+    $('#upload-status').textContent = 'Maksimum 1 MB.';
     e.target.value = '';
+    return;
   }
+  $('#upload-status').textContent = 'Menyiapkan foto…';
+  const reader = new FileReader();
+  reader.onload = () => {
+    const result = String(reader.result);
+    pendingImage = { image_base64: result.split(',')[1], mime: file.type };
+    $('#preview').innerHTML = `<img src="${result}" alt="">`;
+    $('#upload-status').textContent = 'Foto siap disimpan ke D1.';
+  };
+  reader.readAsDataURL(file);
 });
 
 $('#product-form').addEventListener('submit', async e => {
@@ -137,12 +141,21 @@ $('#product-form').addEventListener('submit', async e => {
     sort_order: Number($('#sort-order').value || 0),
     active: $('#active').checked,
     featured: $('#featured').checked,
-    image_key: $('#image-key').value
   };
   $('#save').disabled = true;
   try {
-    if (id) await api(`/api/admin/products/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
-    else await api('/api/admin/products', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    let saved;
+    if (id) saved = await api(`/api/admin/products/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    else saved = await api('/api/admin/products', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    const savedId = id || saved.id;
+    if (pendingImage && savedId) {
+      $('#upload-status').textContent = 'Menyimpan foto ke D1…';
+      await api(`/api/admin/products/${savedId}/image`, {
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(pendingImage)
+      });
+    }
     closeModal();
     await loadProducts();
     notice('Produk berhasil disimpan.');

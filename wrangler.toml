@@ -8,15 +8,12 @@ directory = "./public"
 [[d1_databases]]
 binding = "DB"
 database_name = "sde-store-db"
-database_id = "fbcf0564-1b26-4793-8a3c-fec591d8da74"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
 
-[[r2_buckets]]
-binding = "PRODUCT_IMAGES"
-bucket_name = "sde-product-images"
 
 [vars]
 # Change these in Cloudflare Dashboard > Workers & Pages > Settings > Variables.
-# ADMIN_PASSWORD = "Admin_01"
-# ADMIN_SESSION_SECRET = "P@ssw0rd"
+# ADMIN_PASSWORD = "change-me"
+# ADMIN_SESSION_SECRET = "use-a-long-random-secret"
 
 # Optional. The worker serves images through /media/:key, so no public R2 bucket is required.
