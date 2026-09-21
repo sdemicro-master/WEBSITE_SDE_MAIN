@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Detail Produk — SDE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="simple-header">
+  <a class="brand dark-brand" href="/"><span class="brand-mark">E</span><span><b>SDE</b><small>simple division easy</small></span></a>
+  <a class="back-link" href="/">← Kembali ke Produk</a>
+</header>
+<main class="detail-page">
+  <div id="detail" class="detail-loading">Memuat produk…</div>
+</main>
+<footer><div class="footer-brand">SDE <small>simple division easy</small></div><div>Teknologi Sederhana untuk Kehidupan yang Lebih Baik</div></footer>
+<script>
+const rupiah=n=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n);
+const esc=s=>(s||'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[x]));
+(async()=>{
+ const slug=new URLSearchParams(location.search).get('slug');
+ const el=document.querySelector('#detail');
+ if(!slug){el.innerHTML='<div class="empty">Produk tidak ditemukan.</div>';return}
+ try{
+  const r=await fetch('/api/products/'+encodeURIComponent(slug));
+  if(!r.ok) throw new Error();
+  const p=await r.json();
+  const wa=p.contact_url;
+  el.innerHTML=`
+   <div class="detail-image">${p.image_url?`<img src="${p.image_url}" alt="${esc(p.name)}">`:'<div class="image-placeholder"><span>SDE</span></div>'}</div>
+   <div class="detail-copy">
+    <div class="eyebrow dark">${esc(p.category)}</div>
+    <h1>${esc(p.name)}</h1>
+    <div class="detail-price">${rupiah(p.price)}</div>
+    <p>${esc(p.description)}</p>
+    <div class="contact-note">Tertarik dengan produk ini? Hubungi kami untuk detail, stok, spesifikasi, atau konsultasi sebelum membeli.</div>
+    <div class="market-actions">
+      ${p.shopee_url?`<a class="btn marketplace shopee" href="${esc(p.shopee_url)}" target="_blank" rel="noopener">Beli di Shopee ↗</a>`:''}
+      ${p.tokopedia_url?`<a class="btn marketplace tokopedia" href="${esc(p.tokopedia_url)}" target="_blank" rel="noopener">Beli di Tokopedia ↗</a>`:''}
+      ${wa?`<a class="btn primary" href="${esc(wa)}" target="_blank" rel="noopener">Kontak Produk ↗</a>`:''}
+    </div>
+   </div>`;
+ }catch{el.innerHTML='<div class="empty">Produk tidak ditemukan.</div>'}
+})();
+</script>
+</body>
+</html>

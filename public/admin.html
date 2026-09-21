@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SDE Admin Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="admin-body">
+<div id="login-view" class="login-view">
+  <div class="login-card">
+    <div class="brand dark-brand"><span class="brand-mark">E</span><span><b>SDE</b><small>simple division easy</small></span></div>
+    <div class="eyebrow dark">ADMIN CONSOLE</div>
+    <h1>Kelola Produk</h1>
+    <p>Masuk untuk mengelola katalog dan upload foto produk ke Cloudflare R2.</p>
+    <form id="login-form">
+      <label>Password Admin<input id="password" type="password" required autocomplete="current-password" placeholder="Masukkan password"></label>
+      <button class="btn primary full" type="submit">Masuk ke Console</button>
+      <div id="login-error" class="error"></div>
+    </form>
+  </div>
+</div>
+
+<div id="admin-view" class="admin-view hidden">
+  <aside class="admin-sidebar">
+    <div class="brand dark-brand"><span class="brand-mark">E</span><span><b>SDE</b><small>admin console</small></span></div>
+    <nav>
+      <a class="active" href="#dashboard">▦ Dashboard</a>
+      <a href="#products">▣ Produk</a>
+      <a href="/" target="_blank">↗ Lihat Website</a>
+    </nav>
+    <button id="logout" class="logout">Keluar</button>
+  </aside>
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <div><span class="eyebrow dark">ADMIN CONSOLE</span><h1>Produk</h1></div>
+      <button id="new-product" class="btn primary">+ Produk Baru</button>
+    </div>
+    <div id="notice" class="notice hidden"></div>
+    <section class="stats">
+      <div><span>Total Produk</span><b id="stat-total">0</b></div>
+      <div><span>Produk Aktif</span><b id="stat-active">0</b></div>
+      <div><span>Featured</span><b id="stat-featured">0</b></div>
+    </section>
+    <section class="admin-card">
+      <div class="table-head"><h2>Daftar Produk</h2><input id="search" placeholder="Cari produk…"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Produk</th><th>Kategori</th><th>Harga</th><th>Status</th><th>Featured</th><th></th></tr></thead>
+          <tbody id="product-table"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head"><h2 id="modal-title">Produk Baru</h2><button id="close-modal">×</button></div>
+    <form id="product-form">
+      <input type="hidden" id="product-id">
+      <input type="hidden" id="image-key">
+      <div class="form-grid">
+        <label>Nama Produk<input id="name" required></label>
+        <label>Slug<input id="slug" placeholder="otomatis dari nama"></label>
+        <label>Kategori<input id="category" value="Produk"></label>
+        <label>Harga (Rp)<input id="price" type="number" min="0" value="0"></label>
+        <label class="full-field">Deskripsi<textarea id="description" rows="4"></textarea></label>
+        <label>Shopee URL<input id="shopee-url" type="url" placeholder="https://shopee.co.id/..."></label>
+        <label>Tokopedia URL<input id="tokopedia-url" type="url" placeholder="https://www.tokopedia.com/..."></label>
+        <label class="full-field">Kontak Produk<input id="contact-url" type="url" placeholder="https://wa.me/628... atau link kontak"></label>
+        <label>Urutan<input id="sort-order" type="number" value="0"></label>
+        <div class="check-group">
+          <label class="check"><input id="active" type="checkbox" checked> Aktif</label>
+          <label class="check"><input id="featured" type="checkbox" checked> Featured</label>
+        </div>
+      </div>
+      <div class="upload-box">
+        <div class="preview" id="preview"><span>Belum ada foto</span></div>
+        <div>
+          <b>Foto Produk</b>
+          <p>JPG, PNG, WEBP, AVIF · maksimal 5 MB.</p>
+          <input id="photo" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
+          <div id="upload-status" class="muted"></div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn ghost dark-btn" id="cancel">Batal</button>
+        <button class="btn primary" type="submit" id="save">Simpan Produk</button>
+      </div>
+      <div id="form-error" class="error"></div>
+    </form>
+  </div>
+</div>
+<script src="/admin.js"></script>
+</body>
+</html>
