@@ -13,7 +13,6 @@ database_id = "fbcf0564-1b26-4793-8a3c-fec591d8da74"
 # ...
 [vars]
 admin = "P@ssw0rd230391"
-ADMIN_01 = "P@ssw0rd230391"
 # ...
 
 # Change these in Cloudflare Dashboard > Workers & Pages > Settings > Variables.
